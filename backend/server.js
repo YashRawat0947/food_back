@@ -7,25 +7,12 @@ import userRouter from "./routes/userRoute.js";
 import cartRouter from "./routes/cartRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 
-// ==============================
-// App Config
-// ==============================
-
 const app = express();
-
-// ==============================
-// Connect Services (Serverless Safe)
-// ==============================
 
 connectDB();
 
-// ==============================
-// Middlewares
-// ==============================
-
 app.use(express.json());
 
-// CORS whitelist
 const allowedOrigins = [
   "https://food-front-3k3z.vercel.app"
 ];
@@ -47,21 +34,13 @@ app.use(
 
 app.options("*", cors());
 
-// ==============================
-// API Routes
-// ==============================
-
 app.use("/api/food", foodRouter);
 app.use("/api/user", userRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
 
-// Health Check
 app.get("/", (req, res) => {
   res.send("API Working");
 });
-
-// ❌ DO NOT use app.listen() on Vercel
-// ✅ Export app instead
 
 export default app;
