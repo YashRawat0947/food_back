@@ -27,10 +27,6 @@ const addFood = async (req, res) => {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // Check admin from req.body.userId (set by authMiddleware)
-    if (!(await isAdmin(userId))) {
-      return res.status(403).json({ success: false, message: "Access denied. Admins only." });
-    }
 
     // Upload image buffer to Cloudinary
     const result = await new Promise((resolve, reject) => {
