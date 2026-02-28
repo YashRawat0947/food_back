@@ -3,19 +3,33 @@ import userModel from "../models/userModel.js";
 import cloudinary from "../config/cloudinary.js";
 
 // ==============================
+// HELPER - Check Admin
+// ==============================
+const isAdmin = async (userId) => {
+  if (!userId) return false;
+  const user = await userModel.findById(userId);
+  return user && user.role === "admin";
+};
+
+// ==============================
 // ADD FOOD
 // ==============================
 const addFood = async (req, res) => {
   try {
     // Check image
     if (!req.file) {
-      return res.json({ success: false, message: "Image is required" });
+      return res.status(400).json({ success: false, message: "Image is required" });
     }
 
-    // Check admin
-    const userData = await userModel.findById(req.body.userId);
-    if (!userData || userData.role !== "admin") {
-      return res.json({ success: false, message: "You are not admin" });
+    // Validate required fields
+    const { name, description, price, category } = req.body;
+    if (!name || !description || !price || !category) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    // Check admin from auth middleware ← not from req.body
+    if (!(await isAdmin(req.userId))) {
+      return res.status(403).json({ success: false, message: "Access denied. Admins only." });
     }
 
     // Upload image buffer to Cloudinary
@@ -31,21 +45,21 @@ const addFood = async (req, res) => {
 
     // Create food document
     const food = new foodModel({
-      name: req.body.name,
-      description: req.body.description,
-      price: req.body.price,
-      category: req.body.category,
-      image: result.secure_url,      // store image URL
-      image_public_id: result.public_id, // store public_id for deletion
+      name,
+      description,
+      price: Number(price), // ← ensure it's a number, not a string
+      category,
+      image: result.secure_url,
+      image_public_id: result.public_id,
     });
 
     await food.save();
 
-    res.json({ success: true, message: "Food Added" });
+    res.status(201).json({ success: true, message: "Food Added" });
 
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Error adding food" });
+    console.error("Add food error:", error);
+    res.status(500).json({ success: false, message: "Error adding food" });
   }
 };
 
@@ -55,10 +69,10 @@ const addFood = async (req, res) => {
 const listFood = async (req, res) => {
   try {
     const foods = await foodModel.find({});
-    res.json({ success: true, data: foods });
+    res.status(200).json({ success: true, data: foods });
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Error fetching food" });
+    console.error("List food error:", error);
+    res.status(500).json({ success: false, message: "Error fetching food" });
   }
 };
 
@@ -67,16 +81,19 @@ const listFood = async (req, res) => {
 // ==============================
 const removeFood = async (req, res) => {
   try {
-    const userData = await userModel.findById(req.body.userId);
-
-    if (!userData || userData.role !== "admin") {
-      return res.json({ success: false, message: "You are not admin" });
+    // Check admin from auth middleware ← not from req.body
+    if (!(await isAdmin(req.userId))) {
+      return res.status(403).json({ success: false, message: "Access denied. Admins only." });
     }
 
-    const food = await foodModel.findById(req.body.id);
+    const foodId = req.body.id || req.params.id; // ← support both body and params
+    if (!foodId) {
+      return res.status(400).json({ success: false, message: "Food ID is required" });
+    }
 
+    const food = await foodModel.findById(foodId);
     if (!food) {
-      return res.json({ success: false, message: "Food not found" });
+      return res.status(404).json({ success: false, message: "Food not found" });
     }
 
     // Delete image from Cloudinary
@@ -84,13 +101,13 @@ const removeFood = async (req, res) => {
       await cloudinary.uploader.destroy(food.image_public_id);
     }
 
-    await foodModel.findByIdAndDelete(req.body.id);
+    await foodModel.findByIdAndDelete(foodId);
 
-    res.json({ success: true, message: "Food Removed" });
+    res.status(200).json({ success: true, message: "Food Removed" });
 
   } catch (error) {
-    console.error(error);
-    res.json({ success: false, message: "Error removing food" });
+    console.error("Remove food error:", error);
+    res.status(500).json({ success: false, message: "Error removing food" });
   }
 };
 
