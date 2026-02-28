@@ -22,13 +22,13 @@ const addFood = async (req, res) => {
     }
 
     // Validate required fields
-    const { name, description, price, category } = req.body;
+    const { name, description, price, category, userId } = req.body;
     if (!name || !description || !price || !category) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
-    // Check admin from auth middleware ← not from req.body
-    if (!(await isAdmin(req.userId))) {
+    // Check admin from req.body.userId (set by authMiddleware)
+    if (!(await isAdmin(userId))) {
       return res.status(403).json({ success: false, message: "Access denied. Admins only." });
     }
 
@@ -47,7 +47,7 @@ const addFood = async (req, res) => {
     const food = new foodModel({
       name,
       description,
-      price: Number(price), // ← ensure it's a number, not a string
+      price: Number(price), // form data sends strings, convert to number
       category,
       image: result.secure_url,
       image_public_id: result.public_id,
@@ -81,17 +81,18 @@ const listFood = async (req, res) => {
 // ==============================
 const removeFood = async (req, res) => {
   try {
-    // Check admin from auth middleware ← not from req.body
-    if (!(await isAdmin(req.userId))) {
+    const { userId, id } = req.body;
+
+    // Check admin from req.body.userId (set by authMiddleware)
+    if (!(await isAdmin(userId))) {
       return res.status(403).json({ success: false, message: "Access denied. Admins only." });
     }
 
-    const foodId = req.body.id || req.params.id; // ← support both body and params
-    if (!foodId) {
+    if (!id) {
       return res.status(400).json({ success: false, message: "Food ID is required" });
     }
 
-    const food = await foodModel.findById(foodId);
+    const food = await foodModel.findById(id);
     if (!food) {
       return res.status(404).json({ success: false, message: "Food not found" });
     }
@@ -101,7 +102,7 @@ const removeFood = async (req, res) => {
       await cloudinary.uploader.destroy(food.image_public_id);
     }
 
-    await foodModel.findByIdAndDelete(foodId);
+    await foodModel.findByIdAndDelete(id);
 
     res.status(200).json({ success: true, message: "Food Removed" });
 
