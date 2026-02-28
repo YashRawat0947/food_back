@@ -7,27 +7,35 @@ import validator from "validator";
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: "Email and password are required" });
+  }
+
   try {
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.json({ success: false, message: "User Doesn't exist" });
+      return res.status(404).json({ success: false, message: "User doesn't exist" });
     }
-    const isMatch =await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.json({ success: false, message: "Invalid Credentials" });
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
-    const role=user.role;
+    const role = user.role;
     const token = createToken(user._id);
-    res.json({ success: true, token,role });
+    res.json({ success: true, token, role });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: "Error" });
+    console.error("loginUser error:", error);
+    res.status(500).json({ success: false, message: error.message || "Error" });
   }
 };
 
 // Create token
 
 const createToken = (id) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not defined");
+  }
   return jwt.sign({ id }, process.env.JWT_SECRET);
 };
 
@@ -35,11 +43,17 @@ const createToken = (id) => {
 
 const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
+
+  // basic input validation
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, message: "Name, email and password are required" });
+  }
+
   try {
     // checking user is already exist
     const exists = await userModel.findOne({ email });
     if (exists) {
-      return res.json({ success: false, message: "User already exists" });
+      return res.status(409).json({ success: false, message: "User already exists" });
     }
 
     // validating email format and strong password
@@ -55,7 +69,9 @@ const registerUser = async (req, res) => {
 
     // hashing user password
 
-    const salt = await bcrypt.genSalt(Number(process.env.SALT));
+    // provide a sensible default if the environment variable is missing or invalid
+    const saltRounds = Number(process.env.SALT) || 10;
+    const salt = await bcrypt.genSalt(saltRounds);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = new userModel({
@@ -65,12 +81,13 @@ const registerUser = async (req, res) => {
     });
 
     const user = await newUser.save();
-    const role=user.role;
+    const role = user.role;
     const token = createToken(user._id);
-    res.json({ success: true, token, role});
+    res.json({ success: true, token, role });
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: "Error" });
+    console.error("registerUser error:", error);
+    // return a more descriptive message so the client can debug
+    res.status(500).json({ success: false, message: error.message || "Error" });
   }
 };
 
