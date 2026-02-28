@@ -42,6 +42,7 @@ const createToken = (id) => {
 // register user
 
 const registerUser = async (req, res) => {
+  console.log("MONGO_URL:", process.env.MONGO_URL);
   const { name, email, password } = req.body;
 
   // basic input validation
