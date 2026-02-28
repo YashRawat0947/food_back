@@ -1,25 +1,25 @@
 import userModel from "../models/userModel.js";
-import validator from "validator";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import validator from "validator";
 
-/* =============================
+/* ============================
    Create JWT Token
-============================= */
+============================ */
 const createToken = (id) => {
   if (!process.env.JWT_SECRET) {
-    throw new Error("JWT_SECRET is not defined");
+    throw new Error("JWT_SECRET not defined");
   }
 
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: "7d", // always set expiry
+    expiresIn: "7d",
   });
 };
 
 
-/* =============================
-   User Login
-============================= */
+/* ============================
+   Login User
+============================ */
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -62,15 +62,15 @@ const loginUser = async (req, res) => {
     console.error("loginUser error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Server Error",
     });
   }
 };
 
 
-/* =============================
-   User Register
-============================= */
+/* ============================
+   Register User
+============================ */
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -83,7 +83,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Check existing user
+    // Check if user exists
     const exists = await userModel.findOne({ email });
     if (exists) {
       return res.status(409).json({
@@ -100,7 +100,7 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // Validate password
+    // Validate password strength
     if (password.length < 8) {
       return res.status(400).json({
         success: false,
@@ -116,7 +116,7 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "user", // default role
+      role: "user",
     });
 
     const user = await newUser.save();
@@ -133,48 +133,9 @@ const registerUser = async (req, res) => {
     console.error("registerUser error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Server Error",
     });
   }
 };
 
-
-/* =============================
-   Admin Login
-============================= */
-const adminLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (
-      email === process.env.ADMIN_EMAIL &&
-      password === process.env.ADMIN_PASSWORD
-    ) {
-      const token = jwt.sign(
-        { role: "admin" },
-        process.env.JWT_SECRET,
-        { expiresIn: "7d" }
-      );
-
-      return res.status(200).json({
-        success: true,
-        token,
-        role: "admin",
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-      message: "Invalid email or password",
-    });
-
-  } catch (error) {
-    console.error("adminLogin error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-export { loginUser, registerUser, adminLogin };
+export { loginUser, registerUser };
