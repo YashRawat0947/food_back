@@ -37,7 +37,7 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: [
-      "https://food-front-3k3z.vercel.app",
+      "https://food-front-delta-one.vercel.app",
       "https://food-admin-ochre.vercel.app"
     ],
     credentials: true,
