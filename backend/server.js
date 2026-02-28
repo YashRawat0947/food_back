@@ -13,48 +13,34 @@ connectDB();
 
 app.use(express.json());
 
-// explicit header middleware to ensure CORS headers are always included
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    "https://food-front-3k3z.vercel.app",
-    "https://food-admin-ochre.vercel.app"
-  ];
-  const origin = req.headers.origin;
-  if (!origin || allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  }
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,token");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  // preflight request
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
+const allowedOrigins = [
+  "https://food-front-delta-one.vercel.app",  // ← no trailing slash
+  "https://food-admin-ochre.vercel.app",
+];
 
-// simple CORS middleware as a fallback for any route
 app.use(
   cors({
-    origin: [
-      "https://food-front-delta-one.vercel.app/",
-      "https://food-admin-ochre.vercel.app"
-    ],
+    origin: (origin, callback) => {
+      // allow requests with no origin (e.g. Postman, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "token"]
+    allowedHeaders: ["Content-Type", "Authorization", "token"],
   })
 );
 
-app.options("*", cors());
+app.options("*", cors()); // handle preflight for all routes
 
 app.use("/api/food", foodRouter);
 app.use("/api/user", userRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
 
-app.get("/", (req, res) => {
-  res.send("API Working");
-});
-//hi
+app.get("/", (req, res) => res.send("API Working"));
+
 export default app;
