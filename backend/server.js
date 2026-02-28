@@ -14,7 +14,8 @@ connectDB();
 app.use(express.json());
 
 const allowedOrigins = [
-  "https://food-front-3k3z.vercel.app"
+  "https://food-front-3k3z.vercel.app",
+  "https://food-admin-ochre.vercel.app/"
 ];
 
 app.use(
