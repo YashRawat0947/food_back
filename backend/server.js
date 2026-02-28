@@ -13,23 +13,36 @@ connectDB();
 
 app.use(express.json());
 
-const allowedOrigins = [
-  "https://food-front-3k3z.vercel.app",
-  "https://food-admin-ochre.vercel.app"
-];
+// explicit header middleware to ensure CORS headers are always included
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    "https://food-front-3k3z.vercel.app",
+    "https://food-admin-ochre.vercel.app"
+  ];
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,token");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  // preflight request
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+  next();
+});
 
+// simple CORS middleware as a fallback for any route
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "token"],
+    origin: [
+      "https://food-front-3k3z.vercel.app",
+      "https://food-admin-ochre.vercel.app"
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "token"]
   })
 );
 
